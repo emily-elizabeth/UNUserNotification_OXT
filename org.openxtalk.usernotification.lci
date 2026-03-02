@@ -7,6 +7,7 @@ import module org.openxtalk.usernotification
   use com.livecode.logic
   use com.livecode.string
   use com.livecode.type
+  use com.livecode.engine
   use com.livecode.system
   handler type AddNotificationCompletionBlock(in pContext as Pointer, in pError as optional ObjcId) returns nothing
   handler AddNotificationCompletion(in pContext as Pointer, in pError as optional ObjcId) returns nothing

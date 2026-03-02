@@ -14,6 +14,7 @@
   <requires name="com.livecode.logic"/>
   <requires name="com.livecode.string"/>
   <requires name="com.livecode.type"/>
+  <requires name="com.livecode.engine"/>
   <requires name="com.livecode.system"/>
   <handler name="AddNotificationCompletion" parameters="in Pointer,in optional ObjcId" return="nothing"/>
   <handler name="AuthorizationCompletion" parameters="in Pointer,in CBool,in optional ObjcId" return="nothing"/>
