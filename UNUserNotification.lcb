@@ -85,6 +85,7 @@ end handler
 -- boolean indicating whether permission was granted, and an NSError if something went wrong.
 public handler type AuthorizationCompletionBlock(in pContext as ObjcBlockPointer, in pGranted as CBool, in pError as optional ObjcId) returns nothing
 public handler AuthorizationCompletion(in pContext as ObjcBlockPointer, in pGranted as CBool, in pError as optional ObjcId) returns nothing
+	put false into sAuthorizationInFlight
 	if pGranted then
 		log "UserNotification: authorization granted"
 	else
@@ -109,6 +110,7 @@ end handler
 --   4 = ephemeral      — app-clip / short-session grant (iOS 14+ / macOS 11+)
 public handler type GetNotificationSettingsCompletionBlock(in pContext as ObjcBlockPointer, in pSettings as ObjcId) returns nothing
 public handler GetNotificationSettingsCompletion(in pContext as ObjcBlockPointer, in pSettings as ObjcId) returns nothing
+	put false into sGetSettingsInFlight
 	variable tStatus as CSInt
 	variable tStatusString as String
 	unsafe
@@ -133,7 +135,7 @@ public handler GetNotificationSettingsCompletion(in pContext as ObjcBlockPointer
 	variable tScriptObject as ScriptObject
 	resolve script object "this stack"
 	put the result into tScriptObject
-	send "notificationAuthorizationStatus" to tScriptObject with [tStatusString]
+	post "notificationAuthorizationStatus" to sTarget with [tStatusString]
 end handler
 
 -- Module-level variables hold the block pointers, keeping them retained for the
@@ -141,6 +143,9 @@ end handler
 private variable sAddNotificationBlock as optional ObjcBlockPointer
 private variable sAuthorizationBlock as optional ObjcBlockPointer
 private variable sGetSettingsBlock as optional ObjcBlockPointer
+private variable sGetSettingsInFlight as Boolean
+private variable sAuthorizationInFlight as Boolean
+private variable sTarget as ScriptObject
 
 
 
@@ -153,9 +158,13 @@ private variable sGetSettingsBlock as optional ObjcBlockPointer
 -- Authorization options bitmask: alert=4, sound=2, badge=1 → combined value 7.
 public unsafe handler RequestNotificationAuthorization() returns nothing
 	if (the operating system is "mac") then
+		if sAuthorizationInFlight then
+			return
+		end if
 		variable NotificationCenter as ObjcId
 		put UNUserNotificationCenterCurrentNotificationCenter() into NotificationCenter
 		if (NotificationCenter is not nothing) then
+			put true into sAuthorizationInFlight
 			CreateObjcBlockPointerFromHandler(AuthorizationCompletion, sAuthorizationBlock)
 			UNUserNotificationCenterRequestAuthorization(NotificationCenter, 7, sAuthorizationBlock)
 		end if
@@ -200,9 +209,15 @@ end handler
 --   end notificationAuthorizationStatus
 public unsafe handler CheckNotificationAuthorizationStatus() returns nothing
 	if (the operating system is "mac") then
+		if sGetSettingsInFlight then
+			return
+		end if
+		put the caller into sTarget
 		variable NotificationCenter as ObjcId
 		put UNUserNotificationCenterCurrentNotificationCenter() into NotificationCenter
 		if (NotificationCenter is not nothing) then
+			put true into sGetSettingsInFlight
+			put nothing into sGetSettingsBlock
 			CreateObjcBlockPointerFromHandler(GetNotificationSettingsCompletion, sGetSettingsBlock)
 			UNUserNotificationCenterGetNotificationSettings(NotificationCenter, sGetSettingsBlock)
 		end if
